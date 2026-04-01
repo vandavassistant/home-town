@@ -122,6 +122,130 @@ function speakSpeakerCard() {
   if (tr && tr !== "–") speak(tr);
 }
 
+// ─── SPEECH RECOGNITION ──────────────────────────────────────────────────────
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let sttAvailable = false;
+
+function initRecognition() {
+  if (!SpeechRecognition) return;
+  sttAvailable = true;
+  recognition = new SpeechRecognition();
+  recognition.lang = "tr-TR";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 5;
+
+  recognition.onresult = e => {
+    const alternatives = Array.from(e.results[0]).map(r => r.transcript.trim());
+    handleRecognitionResult(alternatives);
+  };
+
+  recognition.onerror = e => {
+    if (e.error === "no-speech") {
+      showMicResult("⚠️ Nichts gehört – nochmal versuchen", "neutral");
+    } else if (e.error === "not-allowed") {
+      showMicResult("❌ Mikrofon-Zugriff verweigert", "wrong");
+    } else {
+      showMicResult("⚠️ Erkennungsfehler: " + e.error, "neutral");
+    }
+    resetMicBtn();
+  };
+
+  recognition.onend = resetMicBtn;
+}
+
+// Normalize Turkish text for comparison: lowercase, remove punctuation
+function normalizeTr(s) {
+  return s.toLowerCase()
+    .replace(/[.,!?;:"""''()\-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Simple edit distance for fuzzy matching
+function editDistance(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m + 1}, (_, i) => [i]);
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function handleRecognitionResult(alternatives) {
+  const card = currentCard();
+  if (!card) return;
+
+  const target  = normalizeTr(card.tr);
+  const heard   = alternatives[0];
+  const heardN  = normalizeTr(heard);
+
+  // Check all alternatives for any match
+  const bestDist = alternatives.reduce((best, alt) => {
+    return Math.min(best, editDistance(normalizeTr(alt), target));
+  }, Infinity);
+
+  const maxLen  = Math.max(target.length, heardN.length);
+  const ratio   = bestDist / maxLen;   // 0 = perfect, 1 = completely different
+
+  let icon, label, cls;
+  if (ratio === 0) {
+    icon = "✅"; label = "Perfekt!"; cls = "correct";
+  } else if (ratio <= 0.25) {
+    icon = "🟡"; label = "Fast richtig!"; cls = "close";
+  } else if (ratio <= 0.5) {
+    icon = "⚠️"; label = "Nochmal üben"; cls = "neutral";
+  } else {
+    icon = "❌"; label = "Nicht erkannt"; cls = "wrong";
+  }
+
+  showMicResult(`Gehört: „${heard}"\n${icon} ${label}`, cls);
+
+  // Auto-flip to show correct answer after a moment
+  if (!state.cardFlipped) {
+    setTimeout(() => {
+      state.cardFlipped = true;
+      $("flashcard").classList.add("flipped");
+    }, 1200);
+  }
+}
+
+function showMicResult(text, cls) {
+  const result  = $("mic-result");
+  const heard   = $("mic-heard");
+  const verdict = $("mic-verdict");
+  const lines   = text.split("\n");
+  heard.textContent   = lines[0] || "";
+  verdict.textContent = lines[1] || "";
+  verdict.className   = "mic-verdict mic-verdict--" + cls;
+  result.style.display = "flex";
+  $("flip-hint").style.display = "none";
+}
+
+function resetMicBtn() {
+  const btn = $("mic-btn");
+  btn.textContent = "🎤 Sprechen";
+  btn.classList.remove("mic-listening");
+  btn.disabled = false;
+}
+
+function startRecognition() {
+  if (!recognition) return;
+  const btn = $("mic-btn");
+  // Clear previous result
+  $("mic-result").style.display = "none";
+  $("flip-hint").style.display  = "block";
+  btn.textContent = "🔴 Lausche…";
+  btn.classList.add("mic-listening");
+  btn.disabled = true;
+  try {
+    recognition.abort();
+    recognition.start();
+  } catch(_) {}
+}
+
 // ─── TABS ────────────────────────────────────────────────────────────────────
 function switchTab(name) {
   $$(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
@@ -180,6 +304,15 @@ function renderCard() {
   $("back-sub").textContent    = card ? card.sub : "";
 
   $("card-counter").textContent = `${state.cardIndex + 1} / ${state.deck.length}`;
+
+  // Mic button: show only on DE→TR cards (user should say the Turkish word)
+  const micBtn = $("mic-btn");
+  const showMic = sttAvailable && effectiveDir === "de-tr";
+  micBtn.style.display = showMic ? "inline-flex" : "none";
+  // Reset mic state on card change
+  $("mic-result").style.display = "none";
+  $("flip-hint").style.display  = "block";
+  resetMicBtn();
 
   const markBtn = $("mark-btn");
   if (card) {
@@ -412,6 +545,7 @@ function toggleLearned(id) {
 // ─── INIT ────────────────────────────────────────────────────────────────────
 function init() {
   initSpeech();
+  initRecognition();
   loadProgress();
   $("total-count").textContent = VOCABULARY.length;
   populateSubFilter();
@@ -456,6 +590,12 @@ function init() {
       buildDeck();
       renderCard();
     });
+  });
+
+  // ── Mic button ──
+  $("mic-btn").addEventListener("click", e => {
+    e.stopPropagation();
+    startRecognition();
   });
 
   // ── Card speak button (must not propagate to flip) ──
