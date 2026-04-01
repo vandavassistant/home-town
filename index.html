@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Türkisch Lernen – Urlaub & Alltag</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-inner">
+      <h1>🇹🇷 Türkisch Lernen</h1>
+      <p class="subtitle">Urlaub &amp; Alltag · <span id="total-count"></span> Wörter</p>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <p class="progress-label" id="progress-label"></p>
+  </header>
+
+  <!-- NAV TABS -->
+  <nav class="tab-bar">
+    <button class="tab active" data-tab="cards">🃏 Karteikarten</button>
+    <button class="tab" data-tab="quiz">🧠 Quiz</button>
+    <button class="tab" data-tab="list">📋 Vokabelliste</button>
+    <button class="tab" data-tab="speaker">🎙️ Muttersprachler</button>
+  </nav>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>Kategorie</label>
+      <div class="btn-group" id="cat-buttons">
+        <button class="cat-btn active" data-cat="all">📚 Alle</button>
+        <button class="cat-btn" data-cat="basics">💬 Basics</button>
+        <button class="cat-btn" data-cat="urlaub">🏖️ Urlaub</button>
+        <button class="cat-btn" data-cat="alltag">🏠 Alltag</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <label>Thema</label>
+      <select id="sub-filter">
+        <option value="all">Alle Themen</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Richtung</label>
+      <div class="btn-group">
+        <button class="dir-btn active" data-dir="de-tr">DE → TR</button>
+        <button class="dir-btn" data-dir="tr-de">TR → DE</button>
+        <button class="dir-btn" data-dir="random">Zufall</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ KARTEIKARTEN ════════════════════════════════════════════════ -->
+  <section id="tab-cards" class="tab-content active">
+    <div class="card-meta">
+      <span id="card-counter">1 / 10</span>
+      <button class="btn-sm" id="shuffle-btn">🔀 Mischen</button>
+      <button class="btn-sm" id="learned-only-btn">⭐ Gelernte anzeigen</button>
+    </div>
+
+    <div class="flashcard-wrap">
+      <div class="flashcard" id="flashcard" tabindex="0">
+        <div class="card-face card-front">
+          <div class="card-label" id="front-label">Deutsch</div>
+          <div class="card-word" id="front-word">–</div>
+          <div class="card-sub" id="front-sub"></div>
+          <div class="flip-hint">Tippen zum Umdrehen</div>
+        </div>
+        <div class="card-face card-back">
+          <div class="card-label" id="back-label">Türkisch</div>
+          <div class="card-word" id="back-word">–</div>
+          <div class="card-pron" id="back-pron">–</div>
+          <div class="card-sub" id="back-sub"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-actions">
+      <button class="btn btn-prev" id="prev-btn">← Zurück</button>
+      <div class="rating-btns">
+        <button class="btn btn-wrong" id="wrong-btn">✗ Nochmal</button>
+        <button class="btn btn-right" id="right-btn">✓ Gewusst</button>
+      </div>
+      <button class="btn btn-next" id="next-btn">Weiter →</button>
+    </div>
+
+    <div class="mark-bar">
+      <button class="btn-mark" id="mark-btn">☆ Als gelernt markieren</button>
+    </div>
+  </section>
+
+  <!-- ═══════ QUIZ ═════════════════════════════════════════════════════════ -->
+  <section id="tab-quiz" class="tab-content">
+    <div id="quiz-start" class="quiz-panel">
+      <h2>Quiz starten</h2>
+      <p>Wähle eine Antwort aus vier Möglichkeiten.</p>
+      <div class="quiz-settings">
+        <label>Anzahl Fragen:
+          <select id="quiz-count">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="999">Alle</option>
+          </select>
+        </label>
+      </div>
+      <button class="btn btn-primary" id="start-quiz-btn">Quiz starten</button>
+    </div>
+
+    <div id="quiz-run" class="quiz-panel" style="display:none">
+      <div class="quiz-header">
+        <span id="quiz-progress">Frage 1 / 10</span>
+        <span id="quiz-score">✓ 0  ✗ 0</span>
+      </div>
+      <div class="quiz-question">
+        <div class="quiz-q-label" id="quiz-q-label">Was heißt auf Türkisch:</div>
+        <div class="quiz-q-word" id="quiz-q-word">–</div>
+        <div class="quiz-q-sub" id="quiz-q-sub"></div>
+      </div>
+      <div class="quiz-options" id="quiz-options"></div>
+    </div>
+
+    <div id="quiz-result" class="quiz-panel" style="display:none">
+      <h2>Ergebnis</h2>
+      <div class="result-score" id="result-score"></div>
+      <div class="result-grade" id="result-grade"></div>
+      <div class="result-details" id="result-details"></div>
+      <button class="btn btn-primary" id="restart-quiz-btn">Nochmal</button>
+    </div>
+  </section>
+
+  <!-- ═══════ VOKABELLISTE ══════════════════════════════════════════════════ -->
+  <section id="tab-list" class="tab-content">
+    <div class="list-header">
+      <input type="search" id="list-search" placeholder="Suchen…" />
+      <label class="toggle-label">
+        <input type="checkbox" id="show-pron-toggle" checked />
+        Aussprache anzeigen
+      </label>
+    </div>
+    <div id="vocab-list"></div>
+  </section>
+
+  <!-- ═══════ MUTTERSPRACHLER-MODUS ════════════════════════════════════════ -->
+  <section id="tab-speaker" class="tab-content">
+    <div class="speaker-intro">
+      <h2>🎙️ Muttersprachler-Modus</h2>
+      <p>
+        Du hast einen Vorteil: echte Muttersprachler im Haushalt!
+        Hier findest du Tipps und Übungen, die ihr <strong>zusammen</strong> machen könnt.
+      </p>
+    </div>
+
+    <div class="tips-grid">
+      <div class="tip-card">
+        <div class="tip-icon">🔊</div>
+        <h3>Nachsprechen</h3>
+        <p>Lass dir ein Wort vorsagen und sprich es nach. Frage: <em>„Bunu tekrar söyle misin?"</em> (Kannst du das nochmal sagen?)</p>
+      </div>
+      <div class="tip-card">
+        <div class="tip-icon">❓</div>
+        <h3>Im Alltag fragen</h3>
+        <p>Zeige auf Dinge im Haus und frage: <em>„Bu ne?"</em> (Was ist das?)</p>
+      </div>
+      <div class="tip-card">
+        <div class="tip-icon">🎯</div>
+        <h3>Wort des Tages</h3>
+        <p>Bitte den Muttersprachler, dir morgens ein Wort zu nennen. Versuche es den ganzen Tag zu benutzen.</p>
+      </div>
+      <div class="tip-card">
+        <div class="tip-icon">✅</div>
+        <h3>Aussprache prüfen</h3>
+        <p>Sag ein Wort auf Türkisch und lass die Aussprache korrigieren. Muttersprachler hören sofort, ob etwas falsch klingt.</p>
+      </div>
+    </div>
+
+    <div class="speaker-practice">
+      <h3>Zufälliges Übungswort</h3>
+      <p class="speaker-hint">Lies das deutsche Wort, versuche das türkische zu sagen – dann decke die Lösung auf.</p>
+      <div class="flashcard-wrap">
+        <div class="flashcard" id="speaker-card" tabindex="0">
+          <div class="card-face card-front">
+            <div class="card-label">Deutsch</div>
+            <div class="card-word" id="sp-de">–</div>
+            <div class="flip-hint">Tippen für Türkisch</div>
+          </div>
+          <div class="card-face card-back">
+            <div class="card-label">Türkisch</div>
+            <div class="card-word" id="sp-tr">–</div>
+            <div class="card-pron" id="sp-pron">–</div>
+            <p class="speaker-ask">Frage deinen Muttersprachler: Klingt das richtig? 🤔</p>
+          </div>
+        </div>
+      </div>
+      <div class="card-actions" style="margin-top:1rem">
+        <button class="btn btn-next" id="sp-next-btn">Nächstes Wort →</button>
+      </div>
+    </div>
+
+    <div class="phrase-cheatsheet">
+      <h3>Nützliche Sätze für den Haushalt</h3>
+      <table>
+        <thead><tr><th>Deutsch</th><th>Türkisch</th><th>Aussprache</th></tr></thead>
+        <tbody>
+          <tr><td>Wie sagt man … auf Türkisch?</td><td>… Türkçede nasıl denir?</td><td>Türk-tsche-de na-sıl de-nir</td></tr>
+          <tr><td>Kannst du das nochmal sagen?</td><td>Bunu tekrar söyler misin?</td><td>Bu-nu tek-rar sjöj-ler mi-sin</td></tr>
+          <tr><td>Was bedeutet das?</td><td>Bu ne anlama geliyor?</td><td>Bu ne an-la-ma ge-li-jor</td></tr>
+          <tr><td>Ist meine Aussprache richtig?</td><td>Telaffuzum doğru mu?</td><td>Te-laf-fu-sum do-ru mu</td></tr>
+          <tr><td>Ich übe Türkisch.</td><td>Türkçe çalışıyorum.</td><td>Türk-tsche tscha-lı-schı-jo-rum</td></tr>
+          <tr><td>Hilf mir bitte.</td><td>Lütfen bana yardım et.</td><td>Ljüt-fen ba-na jar-dım et</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <p>Fortschritt wird automatisch gespeichert · <button class="link-btn" id="reset-btn">Fortschritt zurücksetzen</button></p>
+  </footer>
+
+  <script src="vocabulary.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
