@@ -79,6 +79,49 @@ function backText(card) {
 const $  = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
 
+// ─── SPEECH ──────────────────────────────────────────────────────────────────
+let ttsAvailable = false;
+let turkishVoice  = null;
+
+function initSpeech() {
+  if (!window.speechSynthesis) return;
+
+  function findVoice() {
+    const voices = speechSynthesis.getVoices();
+    turkishVoice = voices.find(v => v.lang.startsWith("tr")) || null;
+    ttsAvailable = true;
+    // Show all speak buttons once voices are ready
+    $$(".speak-btn").forEach(btn => btn.style.removeProperty("display"));
+  }
+
+  // Voices may load asynchronously on first call
+  if (speechSynthesis.getVoices().length > 0) {
+    findVoice();
+  } else {
+    speechSynthesis.addEventListener("voiceschanged", findVoice, { once: true });
+  }
+}
+
+function speak(text, lang = "tr-TR") {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const utt  = new SpeechSynthesisUtterance(text);
+  utt.lang   = lang;
+  utt.rate   = 0.82;   // slightly slower for learning
+  if (turkishVoice && lang.startsWith("tr")) utt.voice = turkishVoice;
+  speechSynthesis.speak(utt);
+}
+
+function speakCurrentCardTurkish() {
+  const card = currentCard();
+  if (card) speak(card.tr);
+}
+
+function speakSpeakerCard() {
+  const tr = $("sp-tr").textContent;
+  if (tr && tr !== "–") speak(tr);
+}
+
 // ─── TABS ────────────────────────────────────────────────────────────────────
 function switchTab(name) {
   $$(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
@@ -133,7 +176,7 @@ function renderCard() {
 
   $("back-label").textContent  = effectiveDir === "de-tr" ? "Türkisch" : "Deutsch";
   $("back-word").textContent   = backWord;
-  $("back-pron").textContent   = card ? `🔊 ${card.pron}` : "";
+  $("back-pron").textContent   = card ? card.pron : "";
   $("back-sub").textContent    = card ? card.sub : "";
 
   $("card-counter").textContent = `${state.cardIndex + 1} / ${state.deck.length}`;
@@ -197,8 +240,18 @@ function renderQuizQuestion() {
 
   const fromLang = effectiveDir === "de-tr" ? "Türkisch" : "Deutsch";
   $("quiz-q-label").textContent = `Was heißt auf ${fromLang}:`;
-  $("quiz-q-word").textContent  = effectiveDir === "de-tr" ? q.card.de : q.card.tr;
+  const quizWord = effectiveDir === "de-tr" ? q.card.de : q.card.tr;
+  $("quiz-q-word").textContent  = quizWord;
   $("quiz-q-sub").textContent   = q.card.sub;
+
+  // Show speak button only when the question word is Turkish (TR→DE mode)
+  const quizSpeakBtn = $("quiz-speak-btn");
+  if (effectiveDir === "tr-de" && ttsAvailable) {
+    quizSpeakBtn.style.display = "inline-flex";
+    quizSpeakBtn.onclick = e => { e.stopPropagation(); speak(q.card.tr); };
+  } else {
+    quizSpeakBtn.style.display = "none";
+  }
 
   const container = $("quiz-options");
   container.innerHTML = "";
@@ -303,7 +356,10 @@ function renderList(filter = "") {
           ${words.map(v => `
             <tr class="${state.learned.has(v.id) ? "row-learned" : ""}">
               <td>${v.de}</td>
-              <td class="tr-word">${v.tr}</td>
+              <td class="tr-word-cell">
+                <span class="tr-word">${v.tr}</span>
+                ${ttsAvailable ? `<button class="speak-row-btn" data-tr="${v.tr.replace(/"/g,"&quot;")}" title="Vorlesen">🔊</button>` : ""}
+              </td>
               ${showPron ? `<td class="pron-cell">${v.pron}</td>` : ""}
               <td><button class="mark-row-btn ${state.learned.has(v.id) ? "marked" : ""}" data-id="${v.id}">${state.learned.has(v.id) ? "★" : "☆"}</button></td>
             </tr>
@@ -321,6 +377,11 @@ function renderList(filter = "") {
       renderList($("list-search").value);
     });
   });
+
+  // Attach list speak buttons
+  $$(".speak-row-btn").forEach(btn => {
+    btn.addEventListener("click", () => speak(btn.dataset.tr));
+  });
 }
 
 // ─── SPEAKER CARD ────────────────────────────────────────────────────────────
@@ -332,7 +393,7 @@ function renderSpeakerCard() {
   const card = spDeck[spIdx % spDeck.length];
   $("sp-de").textContent   = card.de;
   $("sp-tr").textContent   = card.tr;
-  $("sp-pron").textContent = `🔊 ${card.pron}`;
+  $("sp-pron").textContent = card.pron;
   $("speaker-card").classList.remove("flipped");
 }
 
@@ -350,6 +411,7 @@ function toggleLearned(id) {
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 function init() {
+  initSpeech();
   loadProgress();
   $("total-count").textContent = VOCABULARY.length;
   populateSubFilter();
@@ -394,6 +456,18 @@ function init() {
       buildDeck();
       renderCard();
     });
+  });
+
+  // ── Card speak button (must not propagate to flip) ──
+  $("card-speak-btn").addEventListener("click", e => {
+    e.stopPropagation();
+    speakCurrentCardTurkish();
+  });
+
+  // ── Speaker card speak button ──
+  $("sp-speak-btn").addEventListener("click", e => {
+    e.stopPropagation();
+    speakSpeakerCard();
   });
 
   // ── Flashcard flip ──
