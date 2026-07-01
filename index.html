@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Türkisch Lernen – Urlaub & Alltag</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <meta name="theme-color" content="#e63946" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 </head>
 <body>
 
@@ -22,10 +27,11 @@
 
   <!-- NAV TABS -->
   <nav class="tab-bar">
-    <button class="tab active" data-tab="cards">🃏 Karteikarten</button>
+    <button class="tab active" data-tab="cards">🃏 Karten</button>
     <button class="tab" data-tab="quiz">🧠 Quiz</button>
-    <button class="tab" data-tab="list">📋 Vokabelliste</button>
-    <button class="tab" data-tab="speaker">🎙️ Muttersprachler</button>
+    <button class="tab" data-tab="dialogues">💬 Dialoge</button>
+    <button class="tab" data-tab="list">📋 Liste</button>
+    <button class="tab" data-tab="speaker">🎙️ Sprechen</button>
   </nav>
 
   <!-- FILTER BAR -->
@@ -59,11 +65,18 @@
   <section id="tab-cards" class="tab-content active">
     <div class="card-meta">
       <span id="card-counter">1 / 10</span>
+      <button class="btn-sm" id="srs-btn">📅 SRS</button>
+      <span class="due-badge" id="due-badge" style="display:none"></span>
       <button class="btn-sm" id="shuffle-btn">🔀 Mischen</button>
-      <button class="btn-sm" id="learned-only-btn">⭐ Gelernte anzeigen</button>
+      <button class="btn-sm" id="learned-only-btn">⭐ Gelernte</button>
     </div>
 
     <div class="flashcard-wrap">
+      <div class="srs-complete" id="srs-complete" style="display:none">
+        <div class="srs-complete-icon">✅</div>
+        <h3>Alle Karten für heute erledigt!</h3>
+        <p id="srs-complete-msg"></p>
+      </div>
       <div class="flashcard" id="flashcard" tabindex="0">
         <div class="card-face card-front">
           <div class="card-label" id="front-label">Deutsch</div>
@@ -94,6 +107,8 @@
       </div>
       <button class="btn btn-next" id="next-btn">Weiter →</button>
     </div>
+
+    <div class="srs-feedback" id="srs-feedback" style="display:none"></div>
 
     <div class="mark-bar">
       <button class="btn-mark" id="mark-btn">☆ Als gelernt markieren</button>
@@ -153,6 +168,14 @@
       </label>
     </div>
     <div id="vocab-list"></div>
+  </section>
+
+  <!-- ═══════ DIALOGE ═════════════════════════════════════════════════════ -->
+  <section id="tab-dialogues" class="tab-content">
+    <div class="dialogues-intro">
+      <p>Lerne komplette Gespräche — tippe auf 🔊 um eine Zeile vorzuhören.</p>
+    </div>
+    <div id="dialogues-list"></div>
   </section>
 
   <!-- ═══════ MUTTERSPRACHLER-MODUS ════════════════════════════════════════ -->
@@ -233,6 +256,7 @@
   </footer>
 
   <script src="vocabulary.js"></script>
+  <script src="dialogues.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

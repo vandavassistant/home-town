@@ -613,6 +613,142 @@ input[type="search"]:focus { outline: none; border-color: var(--teal); }
 }
 .speak-row-btn:hover { opacity: 1; }
 
+/* ─── SRS ────────────────────────────────────────────────────────────────── */
+.due-badge {
+  background: var(--red);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 100px;
+}
+
+.srs-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: linear-gradient(145deg, #1a4a3e, var(--teal));
+  border-radius: var(--radius);
+  padding: 3rem 1.5rem;
+  min-height: 220px;
+  box-shadow: var(--shadow);
+}
+.srs-complete-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+.srs-complete h3   { font-size: 1.2rem; margin-bottom: 0.5rem; }
+.srs-complete p    { color: rgba(255,255,255,0.75); font-size: 0.9rem; }
+
+.srs-feedback {
+  text-align: center;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0.5rem auto 0;
+  max-width: 320px;
+}
+.srs-feedback--correct { background: rgba(42,157,143,0.2); color: #80ffdb; }
+.srs-feedback--wrong   { background: rgba(230,57,70,0.2);  color: #ff8fa3; }
+
+/* ─── DIALOGUES ──────────────────────────────────────────────────────────── */
+.dialogues-intro {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.dialogue-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+
+.dialogue-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+.dialogue-header:hover { background: rgba(255,255,255,0.04); }
+.d-emoji  { font-size: 1.3rem; flex-shrink: 0; }
+.d-title  { font-weight: 700; font-size: 0.95rem; flex: 1; }
+.d-sub    { font-size: 0.75rem; color: var(--gold); }
+.d-chevron{ color: var(--muted); font-size: 0.85rem; margin-left: auto; flex-shrink: 0; }
+
+.dialogue-body {
+  padding: 0.5rem 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.d-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.d-line--b {
+  flex-direction: row-reverse;
+}
+
+.d-role {
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  margin-top: 0.4rem;
+  min-width: 52px;
+  text-align: center;
+}
+.d-line--b .d-role { text-align: center; }
+
+.d-bubble {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 0.6rem 0.85rem;
+  max-width: 82%;
+}
+.d-line--b .d-bubble {
+  background: rgba(42,157,143,0.12);
+  border: 1px solid rgba(42,157,143,0.2);
+}
+
+.d-tr   { font-size: 0.95rem; font-weight: 600; color: var(--gold); margin-bottom: 0.2rem; }
+.d-de   { font-size: 0.8rem;  color: var(--muted); margin-bottom: 0.15rem; }
+.d-pron { font-size: 0.75rem; color: rgba(255,255,255,0.35); font-style: italic; }
+
+.d-speak {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  opacity: 0.45;
+  transition: opacity 0.15s;
+  padding: 0.3rem;
+  margin-top: 0.25rem;
+  flex-shrink: 0;
+}
+.d-speak:hover { opacity: 1; }
+
+.dialogue-practice-bar {
+  text-align: center;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
 /* ─── FOOTER ─────────────────────────────────────────────────────────────── */
 footer {
   background: var(--mid);

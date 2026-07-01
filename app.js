@@ -6,9 +6,10 @@ const state = {
   cardIndex: 0,
   cardFlipped: false,
   showLearnedOnly: false,
-  deck: [],               // filtered + optionally shuffled
-  learned: new Set(),     // ids of cards marked learned
-  correct: new Set(),     // ids answered correctly in session
+  srsMode: false,
+  deck: [],
+  learned: new Set(),
+  correct: new Set(),
   quiz: {
     questions: [],
     current: 0,
@@ -18,6 +19,73 @@ const state = {
     results: [],
   },
 };
+
+// ─── SPACED REPETITION (SM-2) ────────────────────────────────────────────────
+const SRS_KEY = "tuerkisch_srs_v1";
+let srsData = {};
+
+function loadSRS() {
+  try {
+    const raw = localStorage.getItem(SRS_KEY);
+    if (raw) srsData = JSON.parse(raw);
+  } catch(_) {}
+}
+
+function saveSRS() {
+  localStorage.setItem(SRS_KEY, JSON.stringify(srsData));
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Returns how many days until next review
+function sm2Update(id, quality) {
+  const s = srsData[id] || { interval: 0, repetitions: 0, ef: 2.5 };
+  let { interval, repetitions, ef } = s;
+
+  if (quality < 3) {
+    interval = 1;
+    repetitions = 0;
+  } else {
+    if (repetitions === 0)      interval = 1;
+    else if (repetitions === 1) interval = 6;
+    else                        interval = Math.round(interval * ef);
+    repetitions++;
+    ef = Math.max(1.3, ef + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+  }
+
+  const due = new Date();
+  due.setDate(due.getDate() + interval);
+  srsData[id] = { interval, repetitions, ef, dueDate: due.toISOString().slice(0, 10), lastReview: todayISO() };
+  saveSRS();
+  return interval;
+}
+
+function buildSRSDeck(pool) {
+  const today = todayISO();
+  const due = pool
+    .filter(c => { const s = srsData[c.id]; return s && s.dueDate <= today; })
+    .sort((a, b) => srsData[a.id].dueDate.localeCompare(srsData[b.id].dueDate));
+  const newCards = pool.filter(c => !srsData[c.id]).slice(0, 10);
+  return [...due, ...newCards];
+}
+
+function countDueToday() {
+  const today = todayISO();
+  return VOCABULARY.filter(c => { const s = srsData[c.id]; return s && s.dueDate <= today; }).length;
+}
+
+function updateDueBadge() {
+  const badge = $("due-badge");
+  const n = countDueToday();
+  if (state.srsMode && n > 0) {
+    badge.textContent = `${n} fällig`;
+    badge.style.display = "inline-block";
+  } else {
+    badge.style.display = "none";
+  }
+}
 
 // ─── PERSISTENCE ─────────────────────────────────────────────────────────────
 function loadProgress() {
@@ -50,7 +118,8 @@ function getFiltered() {
 }
 
 function buildDeck() {
-  state.deck = getFiltered();
+  const pool = getFiltered();
+  state.deck = state.srsMode ? buildSRSDeck(pool) : pool;
   state.cardIndex = 0;
   state.cardFlipped = false;
 }
@@ -282,7 +351,8 @@ function resetMicBtn() {
 function switchTab(name) {
   $$(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
   $$(".tab-content").forEach(s => s.classList.toggle("active", s.id === `tab-${name}`));
-  if (name === "list") renderList();
+  if (name === "list")      renderList();
+  if (name === "dialogues") renderDialogues();
 }
 
 // ─── SUB-FILTER POPULATION ───────────────────────────────────────────────────
@@ -313,9 +383,24 @@ function updateProgress() {
 
 // ─── FLASHCARD RENDER ────────────────────────────────────────────────────────
 function renderCard() {
+  // SRS completion screen
+  const complete = $("srs-complete");
+  const flashcard = $("flashcard");
+  if (state.srsMode && state.deck.length === 0) {
+    complete.style.display = "flex";
+    flashcard.style.display = "none";
+    const due = countDueToday();
+    $("srs-complete-msg").textContent = due > 0
+      ? `${due} Karte${due === 1 ? "" : "n"} morgen fällig.`
+      : "Morgen gibt es neue Karten.";
+    updateDueBadge();
+    return;
+  }
+  complete.style.display = "none";
+  flashcard.style.display = "";
+
   const card = currentCard();
   const flipped = state.cardFlipped;
-  const flashcard = $("flashcard");
 
   flashcard.classList.toggle("flipped", flipped);
 
@@ -574,10 +659,102 @@ function toggleLearned(id) {
   renderCard();
 }
 
+// ─── SRS FEEDBACK ────────────────────────────────────────────────────────────
+function showSRSFeedback(text, cls) {
+  const el = $("srs-feedback");
+  el.textContent = text;
+  el.className = "srs-feedback srs-feedback--" + cls;
+  el.style.display = "block";
+}
+function hideSRSFeedback() {
+  $("srs-feedback").style.display = "none";
+}
+
+// ─── DIALOGUES ───────────────────────────────────────────────────────────────
+function renderDialogues() {
+  const container = $("dialogues-list");
+  container.innerHTML = DIALOGUES.map(d => `
+    <div class="dialogue-card">
+      <button class="dialogue-header" data-id="${d.id}">
+        <span class="d-emoji">${d.emoji}</span>
+        <span class="d-title">${d.title}</span>
+        <span class="d-sub">${d.sub}</span>
+        <span class="d-chevron">▾</span>
+      </button>
+      <div class="dialogue-body" id="dbody-${d.id}" style="display:none">
+        ${d.lines.map((l, i) => `
+          <div class="d-line d-line--${l.speaker.toLowerCase()}">
+            <div class="d-role">${l.role}</div>
+            <div class="d-bubble">
+              <div class="d-tr">${l.tr}</div>
+              <div class="d-de">${l.de}</div>
+              <div class="d-pron">${l.pron}</div>
+            </div>
+            ${ttsAvailable ? `<button class="d-speak" data-tr="${l.tr.replace(/"/g, "&quot;")}" title="Vorlesen">🔊</button>` : ""}
+          </div>
+        `).join("")}
+        <div class="dialogue-practice-bar">
+          <button class="btn btn-primary d-quiz-btn" data-id="${d.id}">Diesen Dialog üben</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+
+  // Toggle open/close
+  $$(".dialogue-header").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const body = $("dbody-" + btn.dataset.id);
+      const open = body.style.display !== "none";
+      // Close all others
+      $$(".dialogue-body").forEach(b => b.style.display = "none");
+      $$(".d-chevron").forEach(c => c.textContent = "▾");
+      if (!open) {
+        body.style.display = "block";
+        btn.querySelector(".d-chevron").textContent = "▴";
+      }
+    });
+  });
+
+  // Speak buttons
+  $$(".d-speak").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      speak(btn.dataset.tr);
+    });
+  });
+
+  // Practice this dialogue: load its words into SRS deck
+  $$(".d-quiz-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const d = DIALOGUES.find(x => x.id === btn.dataset.id);
+      if (!d) return;
+      // Switch to cards tab, filter to the lines of this dialogue as a temporary deck
+      state.deck = d.lines.map((l, i) => ({
+        id: 9000 + i,
+        de: l.de,
+        tr: l.tr,
+        pron: l.pron,
+        cat: "dialogue",
+        sub: d.title,
+      }));
+      state.cardIndex = 0;
+      state.cardFlipped = false;
+      switchTab("cards");
+      renderCard();
+    });
+  });
+}
+
 // ─── INIT ────────────────────────────────────────────────────────────────────
 function init() {
+  // Register service worker for offline support
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }
+
   initSpeech();
   initRecognition();
+  loadSRS();
   loadProgress();
   $("total-count").textContent = VOCABULARY.length;
   populateSubFilter();
@@ -587,9 +764,21 @@ function init() {
   updateProgress();
   renderSpeakerCard();
 
+  updateDueBadge();
+
   // ── Tab buttons ──
   $$(".tab").forEach(btn => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+  });
+
+  // ── SRS toggle ──
+  $("srs-btn").addEventListener("click", () => {
+    state.srsMode = !state.srsMode;
+    $("srs-btn").classList.toggle("active", state.srsMode);
+    $("shuffle-btn").style.display = state.srsMode ? "none" : "";
+    buildDeck();
+    renderCard();
+    updateDueBadge();
   });
 
   // ── Category filter ──
@@ -656,12 +845,28 @@ function init() {
 
   $("right-btn").addEventListener("click", () => {
     const card = currentCard();
-    if (card) { state.learned.add(card.id); saveProgress(); updateProgress(); }
-    nextCard();
+    if (!card) return;
+    state.learned.add(card.id);
+    saveProgress();
+    updateProgress();
+    if (state.srsMode) {
+      const days = sm2Update(card.id, 4);
+      showSRSFeedback(`✓ Gewusst — Wiederholung in ${days} Tag${days === 1 ? "" : "en"}`, "correct");
+      setTimeout(() => { hideSRSFeedback(); nextCard(); }, 1400);
+    } else {
+      nextCard();
+    }
   });
 
   $("wrong-btn").addEventListener("click", () => {
-    nextCard();
+    const card = currentCard();
+    if (state.srsMode && card) {
+      sm2Update(card.id, 1);
+      showSRSFeedback("✗ Nochmal — morgen wieder", "wrong");
+      setTimeout(() => { hideSRSFeedback(); nextCard(); }, 1400);
+    } else {
+      nextCard();
+    }
   });
 
   $("shuffle-btn").addEventListener("click", () => {
