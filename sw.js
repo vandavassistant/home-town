@@ -1,4 +1,4 @@
-const CACHE = 'tuerkisch-v2';
+const CACHE = 'tuerkisch-v3';
 const ASSETS = [
   './',
   './index.html',
