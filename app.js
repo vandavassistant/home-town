@@ -193,57 +193,97 @@ function speakSpeakerCard() {
 
 // ─── SPEECH RECOGNITION ──────────────────────────────────────────────────────
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition     = null;
-let sttAvailable    = false;
-let micGotResult    = false;   // did onresult fire before onend?
-let micTimeout      = null;    // safety timeout handle
+let sttAvailable = false;
+let micActive    = false;
+let micTimeout   = null;
+let activeRec    = null;   // current recognition instance
 
 function initRecognition() {
   if (!SpeechRecognition) return;
   sttAvailable = true;
-  recognition = new SpeechRecognition();
-  recognition.lang             = "tr-TR";
-  recognition.interimResults   = false;
-  recognition.continuous       = false;
-  recognition.maxAlternatives  = 5;
+}
 
-  recognition.onstart = () => {
-    micGotResult = false;
-    // Safety timeout: iOS sometimes never fires onend — force-stop after 7s
+function startRecognition() {
+  if (!sttAvailable) return;
+
+  // Second tap = manual stop
+  if (micActive) {
     clearTimeout(micTimeout);
-    micTimeout = setTimeout(() => {
-      try { recognition.stop(); } catch(_) {}
-    }, 7000);
+    try { if (activeRec) activeRec.stop(); } catch(_) {}
+    showMicResult("⚠️ Abgebrochen", "neutral");
+    resetMicBtn();
+    return;
+  }
+
+  micActive = true;
+  $("mic-result").style.display = "none";
+  $("flip-hint").style.display  = "block";
+  const btn = $("mic-btn");
+  btn.textContent = "⏹ Stopp";
+  btn.classList.add("mic-listening");
+
+  // iOS requires a fresh instance every time — reusing one causes hangs
+  const rec = new SpeechRecognition();
+  activeRec = rec;
+  rec.lang            = "tr-TR";
+  rec.interimResults  = false;
+  rec.continuous      = false;
+  rec.maxAlternatives = 5;
+
+  let gotResult = false;
+
+  // Hard deadline: reset UI after 5s regardless of whether onend fires
+  micTimeout = setTimeout(() => {
+    try { rec.stop(); } catch(_) {}
+    if (!gotResult) showMicResult("⚠️ Nichts gehört – nochmal tippen", "neutral");
+    resetMicBtn();
+  }, 5000);
+
+  rec.onresult = e => {
+    gotResult = true;
+    clearTimeout(micTimeout);
+    const alts = Array.from(e.results[0]).map(r => r.transcript.trim());
+    handleRecognitionResult(alts);
+    resetMicBtn();
   };
 
-  recognition.onresult = e => {
-    micGotResult = true;
+  rec.onerror = e => {
+    gotResult = true;
     clearTimeout(micTimeout);
-    const alternatives = Array.from(e.results[0]).map(r => r.transcript.trim());
-    handleRecognitionResult(alternatives);
-  };
-
-  recognition.onerror = e => {
-    clearTimeout(micTimeout);
-    micGotResult = true;   // prevent onend from showing duplicate message
     if (e.error === "not-allowed") {
-      showMicResult("❌ Mikrofon-Zugriff verweigert\nIn Safari: Einstellungen → Websites → Mikrofon", "wrong");
+      showMicResult("❌ Mikrofon verweigert – Safari: Einstellungen → Datenschutz → Mikrofon", "wrong");
     } else if (e.error === "no-speech") {
-      showMicResult("⚠️ Nichts gehört", "neutral");
+      showMicResult("⚠️ Nichts gehört – nochmal versuchen", "neutral");
     } else {
       showMicResult(`⚠️ Fehler: ${e.error}`, "neutral");
     }
     resetMicBtn();
   };
 
-  // onend always fires last — if no result arrived, mic hung silently on iOS
-  recognition.onend = () => {
+  // onend fires if stop() works — treat it as a fallback only
+  rec.onend = () => {
     clearTimeout(micTimeout);
-    if (!micGotResult) {
-      showMicResult("⚠️ Nichts gehört – nochmal tippen", "neutral");
-    }
+    if (!gotResult) showMicResult("⚠️ Nichts gehört – nochmal tippen", "neutral");
     resetMicBtn();
   };
+
+  try {
+    rec.start();
+  } catch(e) {
+    clearTimeout(micTimeout);
+    showMicResult("⚠️ Start fehlgeschlagen – nochmal tippen", "neutral");
+    resetMicBtn();
+  }
+}
+
+function resetMicBtn() {
+  micActive = false;
+  activeRec = null;
+  const btn = $("mic-btn");
+  if (!btn) return;
+  btn.textContent = "🎤 Sprechen";
+  btn.classList.remove("mic-listening");
+  btn.disabled = false;
 }
 
 // Normalize Turkish text for comparison: lowercase, remove punctuation
@@ -316,36 +356,6 @@ function showMicResult(text, cls) {
   $("flip-hint").style.display = "none";
 }
 
-
-let micActive = false;
-
-function startRecognition() {
-  if (!recognition) return;
-
-  // If already listening, stop on second tap
-  if (micActive) {
-    try { recognition.stop(); } catch(_) {}
-    return;
-  }
-
-  micActive = true;
-  $("mic-result").style.display = "none";
-  $("flip-hint").style.display  = "block";
-  const btn = $("mic-btn");
-  btn.textContent = "⏹ Stopp";
-  btn.classList.add("mic-listening");
-  btn.disabled = false;   // keep enabled so user can tap to stop
-  try { recognition.start(); } catch(_) {}
-}
-
-function resetMicBtn() {
-  micActive = false;
-  const btn = $("mic-btn");
-  if (!btn) return;
-  btn.textContent = "🎤 Sprechen";
-  btn.classList.remove("mic-listening");
-  btn.disabled = false;
-}
 
 // ─── TABS ────────────────────────────────────────────────────────────────────
 function switchTab(name) {
