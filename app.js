@@ -2,7 +2,8 @@
 const state = {
   activeCat: "all",
   activeSub: "all",
-  dir: "de-tr",           // "de-tr" | "tr-de" | "random"
+  dir: "de-tr",           // "de-tr" | "tr-de" | "random" — "de" side follows uiLang
+  uiLang: "de",            // "de" | "en" — interface + source-word language
   cardIndex: 0,
   cardFlipped: false,
   showLearnedOnly: false,
@@ -19,6 +20,35 @@ const state = {
     results: [],
   },
 };
+
+// ─── UI LANGUAGE ─────────────────────────────────────────────────────────────
+const UI_LANG_KEY = "tuerkisch_ui_lang";
+
+function loadUILang() {
+  try {
+    const saved = localStorage.getItem(UI_LANG_KEY);
+    if (saved === "de" || saved === "en") state.uiLang = saved;
+  } catch (_) {}
+}
+
+function saveUILang() {
+  localStorage.setItem(UI_LANG_KEY, state.uiLang);
+}
+
+// The "source" word/label for the current UI language (DE or EN), falling
+// back to German if an English translation is missing on a given entry.
+function srcWord(card) {
+  if (!card) return "–";
+  return state.uiLang === "en" ? (card.en || card.de) : card.de;
+}
+
+function srcLabel() {
+  return state.uiLang === "en" ? t("langEN") : t("langDE");
+}
+
+function srcCode() {
+  return state.uiLang === "en" ? "EN" : "DE";
+}
 
 // ─── SPACED REPETITION (SM-2) ────────────────────────────────────────────────
 const SRS_KEY = "tuerkisch_srs_v1";
@@ -80,7 +110,7 @@ function updateDueBadge() {
   const badge = $("due-badge");
   const n = countDueToday();
   if (state.srsMode && n > 0) {
-    badge.textContent = `${n} fällig`;
+    badge.textContent = t("srsDueBadge", { n });
     badge.style.display = "inline-block";
   } else {
     badge.style.display = "none";
@@ -126,22 +156,6 @@ function buildDeck() {
 
 function currentCard() {
   return state.deck[state.cardIndex] || null;
-}
-
-function frontText(card) {
-  if (!card) return "–";
-  const effectiveDir = state.dir === "random"
-    ? (Math.random() < 0.5 ? "de-tr" : "tr-de")
-    : state.dir;
-  return effectiveDir === "de-tr" ? card.de : card.tr;
-}
-
-function backText(card) {
-  if (!card) return "–";
-  const effectiveDir = state.dir === "random"
-    ? "de-tr"   // randomness fixed per card render; good enough
-    : state.dir;
-  return effectiveDir === "de-tr" ? card.tr : card.de;
 }
 
 // ─── DOM REFS ────────────────────────────────────────────────────────────────
@@ -210,7 +224,7 @@ function startRecognition() {
   if (micActive) {
     clearTimeout(micTimeout);
     try { if (activeRec) activeRec.stop(); } catch(_) {}
-    showMicResult("⚠️ Abgebrochen", "neutral");
+    showMicResult(t("micAborted"), "neutral");
     resetMicBtn();
     return;
   }
@@ -219,7 +233,7 @@ function startRecognition() {
   $("mic-result").style.display = "none";
   $("flip-hint").style.display  = "block";
   const btn = $("mic-btn");
-  btn.textContent = "⏹ Stopp";
+  btn.textContent = t("micBtnStop");
   btn.classList.add("mic-listening");
 
   // iOS requires a fresh instance every time — reusing one causes hangs
@@ -235,7 +249,7 @@ function startRecognition() {
   // Hard deadline: reset UI after 5s regardless of whether onend fires
   micTimeout = setTimeout(() => {
     try { rec.stop(); } catch(_) {}
-    if (!gotResult) showMicResult("⚠️ Nichts gehört – nochmal tippen", "neutral");
+    if (!gotResult) showMicResult(t("micNoSpeechTimeout"), "neutral");
     resetMicBtn();
   }, 5000);
 
@@ -251,11 +265,11 @@ function startRecognition() {
     gotResult = true;
     clearTimeout(micTimeout);
     if (e.error === "not-allowed") {
-      showMicResult("❌ Mikrofon verweigert – Safari: Einstellungen → Datenschutz → Mikrofon", "wrong");
+      showMicResult(t("micNotAllowed"), "wrong");
     } else if (e.error === "no-speech") {
-      showMicResult("⚠️ Nichts gehört – nochmal versuchen", "neutral");
+      showMicResult(t("micNoSpeech"), "neutral");
     } else {
-      showMicResult(`⚠️ Fehler: ${e.error}`, "neutral");
+      showMicResult(t("micError", { err: e.error }), "neutral");
     }
     resetMicBtn();
   };
@@ -263,7 +277,7 @@ function startRecognition() {
   // onend fires if stop() works — treat it as a fallback only
   rec.onend = () => {
     clearTimeout(micTimeout);
-    if (!gotResult) showMicResult("⚠️ Nichts gehört – nochmal tippen", "neutral");
+    if (!gotResult) showMicResult(t("micNoSpeechTimeout"), "neutral");
     resetMicBtn();
   };
 
@@ -271,7 +285,7 @@ function startRecognition() {
     rec.start();
   } catch(e) {
     clearTimeout(micTimeout);
-    showMicResult("⚠️ Start fehlgeschlagen – nochmal tippen", "neutral");
+    showMicResult(t("micStartFailed"), "neutral");
     resetMicBtn();
   }
 }
@@ -281,7 +295,7 @@ function resetMicBtn() {
   activeRec = null;
   const btn = $("mic-btn");
   if (!btn) return;
-  btn.textContent = "🎤 Sprechen";
+  btn.textContent = t("micBtnLabel");
   btn.classList.remove("mic-listening");
   btn.disabled = false;
 }
@@ -322,18 +336,18 @@ function handleRecognitionResult(alternatives) {
   const maxLen  = Math.max(target.length, heardN.length);
   const ratio   = bestDist / maxLen;   // 0 = perfect, 1 = completely different
 
-  let icon, label, cls;
+  let key, cls;
   if (ratio === 0) {
-    icon = "✅"; label = "Perfekt!"; cls = "correct";
+    key = "micPerfect"; cls = "correct";
   } else if (ratio <= 0.25) {
-    icon = "🟡"; label = "Fast richtig!"; cls = "close";
+    key = "micClose"; cls = "close";
   } else if (ratio <= 0.5) {
-    icon = "⚠️"; label = "Nochmal üben"; cls = "neutral";
+    key = "micNeutral"; cls = "neutral";
   } else {
-    icon = "❌"; label = "Nicht erkannt"; cls = "wrong";
+    key = "micWrong"; cls = "wrong";
   }
 
-  showMicResult(`Gehört: „${heard}"\n${icon} ${label}`, cls);
+  showMicResult(`${t("micHeard", { text: heard })}\n${t(key)}`, cls);
 
   // Auto-flip to show correct answer after a moment
   if (!state.cardFlipped) {
@@ -376,7 +390,7 @@ function populateSubFilter() {
   subs.forEach(s => {
     const opt = document.createElement("option");
     opt.value = s;
-    opt.textContent = s;
+    opt.textContent = subLabel(s);
     sel.appendChild(opt);
   });
   sel.value = state.activeSub in [...subs, "all"] ? state.activeSub : "all";
@@ -388,7 +402,7 @@ function updateProgress() {
   const done  = state.learned.size;
   const pct   = Math.round((done / total) * 100);
   $("progress-bar").style.width = pct + "%";
-  $("progress-label").textContent = `${done} von ${total} gelernt (${pct}%)`;
+  $("progress-label").textContent = t("progressLabel", { done, total, pct });
 }
 
 // ─── FLASHCARD RENDER ────────────────────────────────────────────────────────
@@ -400,9 +414,10 @@ function renderCard() {
     complete.style.display = "flex";
     flashcard.style.display = "none";
     const due = countDueToday();
+    const pluralSuffix = due === 1 ? "" : (state.uiLang === "en" ? "s" : "n");
     $("srs-complete-msg").textContent = due > 0
-      ? `${due} Karte${due === 1 ? "" : "n"} morgen fällig.`
-      : "Morgen gibt es neue Karten.";
+      ? t("srsCompleteDue", { n: due, plural: pluralSuffix })
+      : t("srsCompleteNone");
     updateDueBadge();
     return;
   }
@@ -418,17 +433,17 @@ function renderCard() {
     ? (state._randomDir || "de-tr")
     : state.dir;
 
-  const frontWord = card ? (effectiveDir === "de-tr" ? card.de : card.tr) : "–";
-  const backWord  = card ? (effectiveDir === "de-tr" ? card.tr : card.de) : "–";
+  const frontWord = card ? (effectiveDir === "de-tr" ? srcWord(card) : card.tr) : "–";
+  const backWord  = card ? (effectiveDir === "de-tr" ? card.tr : srcWord(card)) : "–";
 
-  $("front-label").textContent = effectiveDir === "de-tr" ? "Deutsch" : "Türkisch";
+  $("front-label").textContent = effectiveDir === "de-tr" ? srcLabel() : t("langTR");
   $("front-word").textContent  = frontWord;
-  $("front-sub").textContent   = card ? card.sub : "";
+  $("front-sub").textContent   = card ? subLabel(card.sub) : "";
 
-  $("back-label").textContent  = effectiveDir === "de-tr" ? "Türkisch" : "Deutsch";
+  $("back-label").textContent  = effectiveDir === "de-tr" ? t("langTR") : srcLabel();
   $("back-word").textContent   = backWord;
   $("back-pron").textContent   = card ? card.pron : "";
-  $("back-sub").textContent    = card ? card.sub : "";
+  $("back-sub").textContent    = card ? subLabel(card.sub) : "";
 
   $("card-counter").textContent = `${state.cardIndex + 1} / ${state.deck.length}`;
 
@@ -444,7 +459,7 @@ function renderCard() {
   const markBtn = $("mark-btn");
   if (card) {
     const isLearned = state.learned.has(card.id);
-    markBtn.textContent = isLearned ? "★ Als gelernt markiert" : "☆ Als gelernt markieren";
+    markBtn.textContent = isLearned ? t("markBtnActive") : t("markBtn");
     markBtn.classList.toggle("marked", isLearned);
   }
 }
@@ -473,7 +488,7 @@ function prevCard() {
 // ─── QUIZ ────────────────────────────────────────────────────────────────────
 function buildQuizQuestions(count) {
   let pool = getFiltered();
-  if (pool.length < 4) { alert("Zu wenige Wörter für das Quiz. Bitte Kategorie erweitern."); return; }
+  if (pool.length < 4) { alert(t("quizTooFewWords")); return; }
   pool = shuffle(pool);
   const n = Math.min(count, pool.length);
   state.quiz.questions = pool.slice(0, n).map(card => {
@@ -495,14 +510,14 @@ function renderQuizQuestion() {
     ? (Math.random() < 0.5 ? "de-tr" : "tr-de")
     : state.dir;
 
-  $("quiz-progress").textContent = `Frage ${state.quiz.current + 1} / ${state.quiz.questions.length}`;
-  $("quiz-score").textContent    = `✓ ${state.quiz.right}  ✗ ${state.quiz.wrong}`;
+  $("quiz-progress").textContent = t("quizProgress", { cur: state.quiz.current + 1, total: state.quiz.questions.length });
+  $("quiz-score").textContent    = t("quizScore", { right: state.quiz.right, wrong: state.quiz.wrong });
 
-  const fromLang = effectiveDir === "de-tr" ? "Türkisch" : "Deutsch";
-  $("quiz-q-label").textContent = `Was heißt auf ${fromLang}:`;
-  const quizWord = effectiveDir === "de-tr" ? q.card.de : q.card.tr;
+  const fromLang = effectiveDir === "de-tr" ? t("langTR") : srcLabel();
+  $("quiz-q-label").textContent = t("quizQLabel", { lang: fromLang });
+  const quizWord = effectiveDir === "de-tr" ? srcWord(q.card) : q.card.tr;
   $("quiz-q-word").textContent  = quizWord;
-  $("quiz-q-sub").textContent   = q.card.sub;
+  $("quiz-q-sub").textContent   = subLabel(q.card.sub);
 
   // Show speak button only when the question word is Turkish (TR→DE mode)
   const quizSpeakBtn = $("quiz-speak-btn");
@@ -520,7 +535,7 @@ function renderQuizQuestion() {
   q.answers.forEach(ans => {
     const btn = document.createElement("button");
     btn.className = "quiz-option";
-    btn.textContent = effectiveDir === "de-tr" ? ans.tr : ans.de;
+    btn.textContent = effectiveDir === "de-tr" ? ans.tr : srcWord(ans);
     btn.addEventListener("click", () => handleQuizAnswer(btn, ans, q, effectiveDir));
     container.appendChild(btn);
   });
@@ -536,7 +551,7 @@ function handleQuizAnswer(btn, ans, q, effectiveDir) {
   // Reveal correct answer
   $$(".quiz-option").forEach(b => {
     const bText = b.textContent;
-    const correctText = effectiveDir === "de-tr" ? q.card.tr : q.card.de;
+    const correctText = effectiveDir === "de-tr" ? q.card.tr : srcWord(q.card);
     if (bText === correctText) b.classList.add("correct");
   });
 
@@ -566,23 +581,23 @@ function showQuizResult() {
   const total = state.quiz.questions.length;
   const pct   = Math.round((state.quiz.right / total) * 100);
 
-  $("result-score").textContent  = `${state.quiz.right} / ${total} richtig (${pct}%)`;
+  $("result-score").textContent = t("quizScoreLine", { right: state.quiz.right, total, pct });
 
-  let grade, emoji;
-  if (pct >= 90)      { grade = "Ausgezeichnet!";   emoji = "🏆"; }
-  else if (pct >= 70) { grade = "Sehr gut!";         emoji = "🎉"; }
-  else if (pct >= 50) { grade = "Gut gemacht!";      emoji = "👍"; }
-  else                { grade = "Weiter üben!";      emoji = "💪"; }
-  $("result-grade").textContent = `${emoji} ${grade}`;
+  let gradeKey;
+  if (pct >= 90)      gradeKey = "quizGradeExcellent";
+  else if (pct >= 70) gradeKey = "quizGradeGreat";
+  else if (pct >= 50) gradeKey = "quizGradeGood";
+  else                gradeKey = "quizGradePractice";
+  $("result-grade").textContent = t(gradeKey);
 
   const details = $("result-details");
   if (state.quiz.results.length > 0) {
-    details.innerHTML = "<h4>Fehler zum Nachlernen:</h4>" +
+    details.innerHTML = `<h4>${t("quizMistakesTitle")}</h4>` +
       state.quiz.results.map(r =>
-        `<div class="result-row"><span class="r-de">${r.card.de}</span> → <span class="r-tr">${r.card.tr}</span> <span class="r-pron">(${r.card.pron})</span></div>`
+        `<div class="result-row"><span class="r-de">${srcWord(r.card)}</span> → <span class="r-tr">${r.card.tr}</span> <span class="r-pron">(${r.card.pron})</span></div>`
       ).join("");
   } else {
-    details.innerHTML = "<p>Keine Fehler – perfekt! 🌟</p>";
+    details.innerHTML = `<p>${t("quizNoMistakes")}</p>`;
   }
 }
 
@@ -593,7 +608,11 @@ function renderList(filter = "") {
   let data = getFiltered();
   if (filter) {
     const q = filter.toLowerCase();
-    data = data.filter(v => v.de.toLowerCase().includes(q) || v.tr.toLowerCase().includes(q));
+    data = data.filter(v =>
+      v.de.toLowerCase().includes(q) ||
+      (v.en || "").toLowerCase().includes(q) ||
+      v.tr.toLowerCase().includes(q)
+    );
   }
 
   // Group by sub
@@ -605,20 +624,20 @@ function renderList(filter = "") {
 
   container.innerHTML = Object.entries(groups).map(([sub, words]) => `
     <div class="list-group">
-      <h3 class="list-group-title">${sub}</h3>
+      <h3 class="list-group-title">${subLabel(sub)}</h3>
       <table class="vocab-table">
         <thead><tr>
-          <th>Deutsch</th><th>Türkisch</th>
-          ${showPron ? "<th>Aussprache</th>" : ""}
-          <th>Gelernt</th>
+          <th>${srcLabel()}</th><th>${t("langTR")}</th>
+          ${showPron ? `<th>${t("cheatsheetPron")}</th>` : ""}
+          <th>${t("listLearnedHeader")}</th>
         </tr></thead>
         <tbody>
           ${words.map(v => `
             <tr class="${state.learned.has(v.id) ? "row-learned" : ""}">
-              <td>${v.de}</td>
+              <td>${srcWord(v)}</td>
               <td class="tr-word-cell">
                 <span class="tr-word">${v.tr}</span>
-                ${ttsAvailable ? `<button class="speak-row-btn" data-tr="${v.tr.replace(/"/g,"&quot;")}" title="Vorlesen">🔊</button>` : ""}
+                ${ttsAvailable ? `<button class="speak-row-btn" data-tr="${v.tr.replace(/"/g,"&quot;")}" title="${t("speakBtnTitle")}">🔊</button>` : ""}
               </td>
               ${showPron ? `<td class="pron-cell">${v.pron}</td>` : ""}
               <td><button class="mark-row-btn ${state.learned.has(v.id) ? "marked" : ""}" data-id="${v.id}">${state.learned.has(v.id) ? "★" : "☆"}</button></td>
@@ -627,7 +646,7 @@ function renderList(filter = "") {
         </tbody>
       </table>
     </div>
-  `).join("") || "<p class='no-results'>Keine Wörter gefunden.</p>";
+  `).join("") || `<p class='no-results'>${t("listNoResults")}</p>`;
 
   // Attach list mark buttons
   $$(".mark-row-btn").forEach(btn => {
@@ -651,7 +670,8 @@ let spIdx  = 0;
 function renderSpeakerCard() {
   if (spDeck.length === 0) spDeck = shuffle(VOCABULARY);
   const card = spDeck[spIdx % spDeck.length];
-  $("sp-de").textContent   = card.de;
+  $("sp-front-label").textContent = srcLabel();
+  $("sp-de").textContent   = srcWord(card);
   $("sp-tr").textContent   = card.tr;
   $("sp-pron").textContent = card.pron;
   $("speaker-card").classList.remove("flipped");
@@ -683,28 +703,29 @@ function hideSRSFeedback() {
 // ─── DIALOGUES ───────────────────────────────────────────────────────────────
 function renderDialogues() {
   const container = $("dialogues-list");
+  const isEn = state.uiLang === "en";
   container.innerHTML = DIALOGUES.map(d => `
     <div class="dialogue-card">
       <button class="dialogue-header" data-id="${d.id}">
         <span class="d-emoji">${d.emoji}</span>
-        <span class="d-title">${d.title}</span>
+        <span class="d-title">${isEn ? d.titleEn : d.title}</span>
         <span class="d-sub">${d.sub}</span>
         <span class="d-chevron">▾</span>
       </button>
       <div class="dialogue-body" id="dbody-${d.id}" style="display:none">
         ${d.lines.map((l, i) => `
           <div class="d-line d-line--${l.speaker.toLowerCase()}">
-            <div class="d-role">${l.role}</div>
+            <div class="d-role">${isEn ? l.roleEn : l.role}</div>
             <div class="d-bubble">
               <div class="d-tr">${l.tr}</div>
-              <div class="d-de">${l.de}</div>
+              <div class="d-de">${isEn ? l.en : l.de}</div>
               <div class="d-pron">${l.pron}</div>
             </div>
-            ${ttsAvailable ? `<button class="d-speak" data-tr="${l.tr.replace(/"/g, "&quot;")}" title="Vorlesen">🔊</button>` : ""}
+            ${ttsAvailable ? `<button class="d-speak" data-tr="${l.tr.replace(/"/g, "&quot;")}" title="${t("speakBtnTitle")}">🔊</button>` : ""}
           </div>
         `).join("")}
         <div class="dialogue-practice-bar">
-          <button class="btn btn-primary d-quiz-btn" data-id="${d.id}">Diesen Dialog üben</button>
+          <button class="btn btn-primary d-quiz-btn" data-id="${d.id}">${t("dialoguePracticeBtn")}</button>
         </div>
       </div>
     </div>
@@ -742,10 +763,11 @@ function renderDialogues() {
       state.deck = d.lines.map((l, i) => ({
         id: 9000 + i,
         de: l.de,
+        en: l.en,
         tr: l.tr,
         pron: l.pron,
         cat: "dialogue",
-        sub: d.title,
+        sub: state.uiLang === "en" ? d.titleEn : d.title,
       }));
       state.cardIndex = 0;
       state.cardFlipped = false;
@@ -753,6 +775,56 @@ function renderDialogues() {
       renderCard();
     });
   });
+}
+
+// ─── CHEATSHEET (Muttersprachler-Modus) ──────────────────────────────────────
+function renderCheatsheet() {
+  const body = $("cheatsheet-body");
+  if (!body) return;
+  const isEn = state.uiLang === "en";
+  body.innerHTML = CHEATSHEET_ROWS.map(r => `
+    <tr><td>${isEn ? r.en : r.de}</td><td>${r.tr}</td><td>${r.pron}</td></tr>
+  `).join("");
+}
+
+// ─── UI LANGUAGE APPLY ────────────────────────────────────────────────────────
+function applyUILang() {
+  document.documentElement.lang = state.uiLang;
+  document.title = t("pageTitle");
+
+  $$("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
+  $$("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+  $$("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
+  $$("[data-i18n-title]").forEach(el => { el.title = t(el.getAttribute("data-i18n-title")); });
+
+  $("lang-toggle-flag").textContent  = state.uiLang === "en" ? "🇩🇪" : "🇬🇧";
+  $("lang-toggle-label").textContent = state.uiLang === "en" ? "DE" : "EN";
+
+  $("dir-btn-source").textContent = t("dirSourceToTr", { src: srcCode() });
+  $("dir-btn-target").textContent = t("dirTrToSource", { src: srcCode() });
+
+  $("cheatsheet-th-source").textContent = srcLabel();
+
+  $("learned-only-btn").textContent = state.showLearnedOnly ? t("learnedOnlyBtnActive") : t("learnedOnlyBtn");
+}
+
+// Re-renders every part of the UI that shows source-language or sub-category
+// text after the interface language changed.
+function refreshLanguage() {
+  applyUILang();
+  populateSubFilter();
+  renderCard();
+  renderSpeakerCard();
+  renderCheatsheet();
+  updateProgress();
+  updateDueBadge();
+
+  const activeTab = document.querySelector(".tab.active")?.dataset.tab;
+  if (activeTab === "list")      renderList($("list-search").value);
+  if (activeTab === "dialogues") renderDialogues();
+  if ($("quiz-run").style.display !== "none" && state.quiz.questions.length) {
+    renderQuizQuestion();
+  }
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
@@ -766,15 +838,25 @@ function init() {
   initRecognition();
   loadSRS();
   loadProgress();
+  loadUILang();
   $("total-count").textContent = VOCABULARY.length;
+  applyUILang();
   populateSubFilter();
   buildDeck();
   state._randomDir = "de-tr";
   renderCard();
   updateProgress();
   renderSpeakerCard();
+  renderCheatsheet();
 
   updateDueBadge();
+
+  // ── Language toggle ──
+  $("lang-toggle").addEventListener("click", () => {
+    state.uiLang = state.uiLang === "de" ? "en" : "de";
+    saveUILang();
+    refreshLanguage();
+  });
 
   // ── Tab buttons ──
   $$(".tab").forEach(btn => {
@@ -861,7 +943,8 @@ function init() {
     updateProgress();
     if (state.srsMode) {
       const days = sm2Update(card.id, 4);
-      showSRSFeedback(`✓ Gewusst — Wiederholung in ${days} Tag${days === 1 ? "" : "en"}`, "correct");
+      const pluralSuffix = days === 1 ? "" : (state.uiLang === "en" ? "s" : "e");
+      showSRSFeedback(t("srsRightFeedback", { n: days, plural: pluralSuffix }), "correct");
       setTimeout(() => { hideSRSFeedback(); nextCard(); }, 1400);
     } else {
       nextCard();
@@ -872,7 +955,7 @@ function init() {
     const card = currentCard();
     if (state.srsMode && card) {
       sm2Update(card.id, 1);
-      showSRSFeedback("✗ Nochmal — morgen wieder", "wrong");
+      showSRSFeedback(t("srsWrongFeedback"), "wrong");
       setTimeout(() => { hideSRSFeedback(); nextCard(); }, 1400);
     } else {
       nextCard();
@@ -889,7 +972,7 @@ function init() {
   $("learned-only-btn").addEventListener("click", () => {
     state.showLearnedOnly = !state.showLearnedOnly;
     $("learned-only-btn").classList.toggle("active", state.showLearnedOnly);
-    $("learned-only-btn").textContent = state.showLearnedOnly ? "⭐ Alle anzeigen" : "⭐ Gelernte anzeigen";
+    $("learned-only-btn").textContent = state.showLearnedOnly ? t("learnedOnlyBtnActive") : t("learnedOnlyBtn");
     buildDeck();
     renderCard();
   });
@@ -930,7 +1013,7 @@ function init() {
 
   // ── Reset progress ──
   $("reset-btn").addEventListener("click", () => {
-    if (confirm("Gesamten Fortschritt zurücksetzen?")) {
+    if (confirm(t("resetConfirm"))) {
       state.learned.clear();
       saveProgress();
       updateProgress();

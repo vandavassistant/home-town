@@ -1,9 +1,10 @@
-const CACHE = 'tuerkisch-v5';
+const CACHE = 'tuerkisch-v6';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './i18n.js',
   './vocabulary.js',
   './dialogues.js',
   './manifest.json',

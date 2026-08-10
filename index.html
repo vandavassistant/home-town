@@ -15,9 +15,16 @@
 
   <!-- HEADER -->
   <header>
+    <button class="lang-toggle" id="lang-toggle" title="Switch language / Sprache wechseln">
+      <span id="lang-toggle-flag">🇬🇧</span> <span id="lang-toggle-label">EN</span>
+    </button>
     <div class="header-inner">
-      <h1>🇹🇷 Türkisch Lernen</h1>
-      <p class="subtitle">Urlaub &amp; Alltag · <span id="total-count"></span> Wörter</p>
+      <h1 id="app-title" data-i18n="appTitle">🇹🇷 Türkisch Lernen</h1>
+      <p class="subtitle">
+        <span data-i18n="subtitlePrefix">Urlaub &amp; Alltag</span> ·
+        <span id="total-count"></span>
+        <span data-i18n="subtitleSuffix">Wörter</span>
+      </p>
     </div>
     <div class="progress-bar-wrap">
       <div class="progress-bar" id="progress-bar"></div>
@@ -27,36 +34,36 @@
 
   <!-- NAV TABS -->
   <nav class="tab-bar">
-    <button class="tab active" data-tab="cards">🃏 Karten</button>
-    <button class="tab" data-tab="quiz">🧠 Quiz</button>
-    <button class="tab" data-tab="dialogues">💬 Dialoge</button>
-    <button class="tab" data-tab="list">📋 Liste</button>
-    <button class="tab" data-tab="speaker">🎙️ Sprechen</button>
+    <button class="tab active" data-tab="cards" data-i18n="tabCards">🃏 Karten</button>
+    <button class="tab" data-tab="quiz" data-i18n="tabQuiz">🧠 Quiz</button>
+    <button class="tab" data-tab="dialogues" data-i18n="tabDialogues">💬 Dialoge</button>
+    <button class="tab" data-tab="list" data-i18n="tabList">📋 Liste</button>
+    <button class="tab" data-tab="speaker" data-i18n="tabSpeaker">🎙️ Sprechen</button>
   </nav>
 
   <!-- FILTER BAR -->
   <div class="filter-bar">
     <div class="filter-group">
-      <label>Kategorie</label>
+      <label data-i18n="filterCategory">Kategorie</label>
       <div class="btn-group" id="cat-buttons">
-        <button class="cat-btn active" data-cat="all">📚 Alle</button>
-        <button class="cat-btn" data-cat="basics">💬 Basics</button>
-        <button class="cat-btn" data-cat="urlaub">🏖️ Urlaub</button>
-        <button class="cat-btn" data-cat="alltag">🏠 Alltag</button>
+        <button class="cat-btn active" data-cat="all" data-i18n="catAll">📚 Alle</button>
+        <button class="cat-btn" data-cat="basics" data-i18n="catBasics">💬 Basics</button>
+        <button class="cat-btn" data-cat="urlaub" data-i18n="catUrlaub">🏖️ Urlaub</button>
+        <button class="cat-btn" data-cat="alltag" data-i18n="catAlltag">🏠 Alltag</button>
       </div>
     </div>
     <div class="filter-group">
-      <label>Thema</label>
+      <label data-i18n="filterTopic">Thema</label>
       <select id="sub-filter">
-        <option value="all">Alle Themen</option>
+        <option value="all" data-i18n="allTopics">Alle Themen</option>
       </select>
     </div>
     <div class="filter-group">
-      <label>Richtung</label>
+      <label data-i18n="filterDirection">Richtung</label>
       <div class="btn-group">
-        <button class="dir-btn active" data-dir="de-tr">DE → TR</button>
-        <button class="dir-btn" data-dir="tr-de">TR → DE</button>
-        <button class="dir-btn" data-dir="random">Zufall</button>
+        <button class="dir-btn active" data-dir="de-tr" id="dir-btn-source">DE → TR</button>
+        <button class="dir-btn" data-dir="tr-de" id="dir-btn-target">TR → DE</button>
+        <button class="dir-btn" data-dir="random" data-i18n="dirRandom">Zufall</button>
       </div>
     </div>
   </div>
@@ -65,16 +72,16 @@
   <section id="tab-cards" class="tab-content active">
     <div class="card-meta">
       <span id="card-counter">1 / 10</span>
-      <button class="btn-sm" id="srs-btn">📅 SRS</button>
+      <button class="btn-sm" id="srs-btn" data-i18n="srsBtn">📅 SRS</button>
       <span class="due-badge" id="due-badge" style="display:none"></span>
-      <button class="btn-sm" id="shuffle-btn">🔀 Mischen</button>
-      <button class="btn-sm" id="learned-only-btn">⭐ Gelernte</button>
+      <button class="btn-sm" id="shuffle-btn" data-i18n="shuffleBtn">🔀 Mischen</button>
+      <button class="btn-sm" id="learned-only-btn" data-i18n="learnedOnlyBtn">⭐ Gelernte</button>
     </div>
 
     <div class="flashcard-wrap">
       <div class="srs-complete" id="srs-complete" style="display:none">
         <div class="srs-complete-icon">✅</div>
-        <h3>Alle Karten für heute erledigt!</h3>
+        <h3 data-i18n="srsCompleteTitle">Alle Karten für heute erledigt!</h3>
         <p id="srs-complete-msg"></p>
       </div>
       <div class="flashcard" id="flashcard" tabindex="0">
@@ -82,55 +89,55 @@
           <div class="card-label" id="front-label">Deutsch</div>
           <div class="card-word" id="front-word">–</div>
           <div class="card-sub" id="front-sub"></div>
-          <button class="mic-btn" id="mic-btn" title="Aussprache testen" style="display:none">🎤 Sprechen</button>
+          <button class="mic-btn" id="mic-btn" data-i18n-title="micBtnTitle" title="Aussprache testen" style="display:none" data-i18n="micBtnLabel">🎤 Sprechen</button>
           <div class="mic-result" id="mic-result" style="display:none">
             <div class="mic-heard" id="mic-heard"></div>
             <div class="mic-verdict" id="mic-verdict"></div>
           </div>
-          <div class="flip-hint" id="flip-hint">Tippen zum Umdrehen</div>
+          <div class="flip-hint" id="flip-hint" data-i18n="flipHint">Tippen zum Umdrehen</div>
         </div>
         <div class="card-face card-back">
           <div class="card-label" id="back-label">Türkisch</div>
           <div class="card-word" id="back-word">–</div>
           <div class="card-pron" id="back-pron">–</div>
           <div class="card-sub" id="back-sub"></div>
-          <button class="speak-btn" id="card-speak-btn" title="Vorlesen">🔊 Vorlesen</button>
+          <button class="speak-btn" id="card-speak-btn" data-i18n-title="speakBtnTitle" title="Vorlesen" data-i18n="speakBtn">🔊 Vorlesen</button>
         </div>
       </div>
     </div>
 
     <div class="card-actions">
-      <button class="btn btn-prev" id="prev-btn">← Zurück</button>
+      <button class="btn btn-prev" id="prev-btn" data-i18n="prevBtn">← Zurück</button>
       <div class="rating-btns">
-        <button class="btn btn-wrong" id="wrong-btn">✗ Nochmal</button>
-        <button class="btn btn-right" id="right-btn">✓ Gewusst</button>
+        <button class="btn btn-wrong" id="wrong-btn" data-i18n="wrongBtn">✗ Nochmal</button>
+        <button class="btn btn-right" id="right-btn" data-i18n="rightBtn">✓ Gewusst</button>
       </div>
-      <button class="btn btn-next" id="next-btn">Weiter →</button>
+      <button class="btn btn-next" id="next-btn" data-i18n="nextBtn">Weiter →</button>
     </div>
 
     <div class="srs-feedback" id="srs-feedback" style="display:none"></div>
 
     <div class="mark-bar">
-      <button class="btn-mark" id="mark-btn">☆ Als gelernt markieren</button>
+      <button class="btn-mark" id="mark-btn" data-i18n="markBtn">☆ Als gelernt markieren</button>
     </div>
   </section>
 
   <!-- ═══════ QUIZ ═════════════════════════════════════════════════════════ -->
   <section id="tab-quiz" class="tab-content">
     <div id="quiz-start" class="quiz-panel">
-      <h2>Quiz starten</h2>
-      <p>Wähle eine Antwort aus vier Möglichkeiten.</p>
+      <h2 data-i18n="quizStartTitle">Quiz starten</h2>
+      <p data-i18n="quizStartDesc">Wähle eine Antwort aus vier Möglichkeiten.</p>
       <div class="quiz-settings">
-        <label>Anzahl Fragen:
+        <label><span data-i18n="quizCountLabel">Anzahl Fragen:</span>
           <select id="quiz-count">
             <option value="5">5</option>
             <option value="10" selected>10</option>
             <option value="20">20</option>
-            <option value="999">Alle</option>
+            <option value="999" data-i18n="quizCountAll">Alle</option>
           </select>
         </label>
       </div>
-      <button class="btn btn-primary" id="start-quiz-btn">Quiz starten</button>
+      <button class="btn btn-primary" id="start-quiz-btn" data-i18n="quizStartBtn">Quiz starten</button>
     </div>
 
     <div id="quiz-run" class="quiz-panel" style="display:none">
@@ -142,7 +149,7 @@
         <div class="quiz-q-label" id="quiz-q-label">Was heißt auf Türkisch:</div>
         <div class="quiz-q-word-row">
           <div class="quiz-q-word" id="quiz-q-word">–</div>
-          <button class="speak-btn speak-btn-inline" id="quiz-speak-btn" title="Vorlesen" style="display:none">🔊</button>
+          <button class="speak-btn speak-btn-inline" id="quiz-speak-btn" data-i18n-title="speakBtnTitle" title="Vorlesen" style="display:none">🔊</button>
         </div>
         <div class="quiz-q-sub" id="quiz-q-sub"></div>
       </div>
@@ -150,21 +157,21 @@
     </div>
 
     <div id="quiz-result" class="quiz-panel" style="display:none">
-      <h2>Ergebnis</h2>
+      <h2 data-i18n="quizResultTitle">Ergebnis</h2>
       <div class="result-score" id="result-score"></div>
       <div class="result-grade" id="result-grade"></div>
       <div class="result-details" id="result-details"></div>
-      <button class="btn btn-primary" id="restart-quiz-btn">Nochmal</button>
+      <button class="btn btn-primary" id="restart-quiz-btn" data-i18n="quizRestartBtn">Nochmal</button>
     </div>
   </section>
 
   <!-- ═══════ VOKABELLISTE ══════════════════════════════════════════════════ -->
   <section id="tab-list" class="tab-content">
     <div class="list-header">
-      <input type="search" id="list-search" placeholder="Suchen…" />
+      <input type="search" id="list-search" data-i18n-placeholder="listSearchPlaceholder" placeholder="Suchen…" />
       <label class="toggle-label">
         <input type="checkbox" id="show-pron-toggle" checked />
-        Aussprache anzeigen
+        <span data-i18n="listShowPron">Aussprache anzeigen</span>
       </label>
     </div>
     <div id="vocab-list"></div>
@@ -173,7 +180,7 @@
   <!-- ═══════ DIALOGE ═════════════════════════════════════════════════════ -->
   <section id="tab-dialogues" class="tab-content">
     <div class="dialogues-intro">
-      <p>Lerne komplette Gespräche — tippe auf 🔊 um eine Zeile vorzuhören.</p>
+      <p data-i18n="dialoguesIntro">Lerne komplette Gespräche — tippe auf 🔊 um eine Zeile vorzuhören.</p>
     </div>
     <div id="dialogues-list"></div>
   </section>
@@ -181,8 +188,8 @@
   <!-- ═══════ MUTTERSPRACHLER-MODUS ════════════════════════════════════════ -->
   <section id="tab-speaker" class="tab-content">
     <div class="speaker-intro">
-      <h2>🎙️ Muttersprachler-Modus</h2>
-      <p>
+      <h2 data-i18n="speakerTitle">🎙️ Muttersprachler-Modus</h2>
+      <p data-i18n-html="speakerIntroHtml">
         Du hast einen Vorteil: echte Muttersprachler im Haushalt!
         Hier findest du Tipps und Übungen, die ihr <strong>zusammen</strong> machen könnt.
       </p>
@@ -191,70 +198,64 @@
     <div class="tips-grid">
       <div class="tip-card">
         <div class="tip-icon">🔊</div>
-        <h3>Nachsprechen</h3>
-        <p>Lass dir ein Wort vorsagen und sprich es nach. Frage: <em>„Bunu tekrar söyle misin?"</em> (Kannst du das nochmal sagen?)</p>
+        <h3 data-i18n="tip1Title">Nachsprechen</h3>
+        <p data-i18n-html="tip1Body">Lass dir ein Wort vorsagen und sprich es nach. Frage: <em>„Bunu tekrar söyle misin?"</em> (Kannst du das nochmal sagen?)</p>
       </div>
       <div class="tip-card">
         <div class="tip-icon">❓</div>
-        <h3>Im Alltag fragen</h3>
-        <p>Zeige auf Dinge im Haus und frage: <em>„Bu ne?"</em> (Was ist das?)</p>
+        <h3 data-i18n="tip2Title">Im Alltag fragen</h3>
+        <p data-i18n-html="tip2Body">Zeige auf Dinge im Haus und frage: <em>„Bu ne?"</em> (Was ist das?)</p>
       </div>
       <div class="tip-card">
         <div class="tip-icon">🎯</div>
-        <h3>Wort des Tages</h3>
-        <p>Bitte den Muttersprachler, dir morgens ein Wort zu nennen. Versuche es den ganzen Tag zu benutzen.</p>
+        <h3 data-i18n="tip3Title">Wort des Tages</h3>
+        <p data-i18n="tip3Body">Bitte den Muttersprachler, dir morgens ein Wort zu nennen. Versuche es den ganzen Tag zu benutzen.</p>
       </div>
       <div class="tip-card">
         <div class="tip-icon">✅</div>
-        <h3>Aussprache prüfen</h3>
-        <p>Sag ein Wort auf Türkisch und lass die Aussprache korrigieren. Muttersprachler hören sofort, ob etwas falsch klingt.</p>
+        <h3 data-i18n="tip4Title">Aussprache prüfen</h3>
+        <p data-i18n="tip4Body">Sag ein Wort auf Türkisch und lass die Aussprache korrigieren. Muttersprachler hören sofort, ob etwas falsch klingt.</p>
       </div>
     </div>
 
     <div class="speaker-practice">
-      <h3>Zufälliges Übungswort</h3>
-      <p class="speaker-hint">Lies das deutsche Wort, versuche das türkische zu sagen – dann decke die Lösung auf.</p>
+      <h3 data-i18n="speakerPracticeTitle">Zufälliges Übungswort</h3>
+      <p class="speaker-hint" data-i18n="speakerHint">Lies das deutsche Wort, versuche das türkische zu sagen – dann decke die Lösung auf.</p>
       <div class="flashcard-wrap">
         <div class="flashcard" id="speaker-card" tabindex="0">
           <div class="card-face card-front">
-            <div class="card-label">Deutsch</div>
+            <div class="card-label" id="sp-front-label">Deutsch</div>
             <div class="card-word" id="sp-de">–</div>
-            <div class="flip-hint">Tippen für Türkisch</div>
+            <div class="flip-hint" data-i18n="speakerFlipHint">Tippen für Türkisch</div>
           </div>
           <div class="card-face card-back">
             <div class="card-label">Türkisch</div>
             <div class="card-word" id="sp-tr">–</div>
             <div class="card-pron" id="sp-pron">–</div>
-            <button class="speak-btn" id="sp-speak-btn" title="Vorlesen">🔊 Vorlesen</button>
-            <p class="speaker-ask">Frage deinen Muttersprachler: Klingt das richtig? 🤔</p>
+            <button class="speak-btn" id="sp-speak-btn" data-i18n-title="speakBtnTitle" title="Vorlesen" data-i18n="speakBtn">🔊 Vorlesen</button>
+            <p class="speaker-ask" data-i18n="speakerAsk">Frage deinen Muttersprachler: Klingt das richtig? 🤔</p>
           </div>
         </div>
       </div>
       <div class="card-actions" style="margin-top:1rem">
-        <button class="btn btn-next" id="sp-next-btn">Nächstes Wort →</button>
+        <button class="btn btn-next" id="sp-next-btn" data-i18n="speakerNextBtn">Nächstes Wort →</button>
       </div>
     </div>
 
     <div class="phrase-cheatsheet">
-      <h3>Nützliche Sätze für den Haushalt</h3>
+      <h3 data-i18n="cheatsheetTitle">Nützliche Sätze für den Haushalt</h3>
       <table>
-        <thead><tr><th>Deutsch</th><th>Türkisch</th><th>Aussprache</th></tr></thead>
-        <tbody>
-          <tr><td>Wie sagt man … auf Türkisch?</td><td>… Türkçede nasıl denir?</td><td>Türk-tsche-de na-sıl de-nir</td></tr>
-          <tr><td>Kannst du das nochmal sagen?</td><td>Bunu tekrar söyler misin?</td><td>Bu-nu tek-rar sjöj-ler mi-sin</td></tr>
-          <tr><td>Was bedeutet das?</td><td>Bu ne anlama geliyor?</td><td>Bu ne an-la-ma ge-li-jor</td></tr>
-          <tr><td>Ist meine Aussprache richtig?</td><td>Telaffuzum doğru mu?</td><td>Te-laf-fu-sum do-ru mu</td></tr>
-          <tr><td>Ich übe Türkisch.</td><td>Türkçe çalışıyorum.</td><td>Türk-tsche tscha-lı-schı-jo-rum</td></tr>
-          <tr><td>Hilf mir bitte.</td><td>Lütfen bana yardım et.</td><td>Ljüt-fen ba-na jar-dım et</td></tr>
-        </tbody>
+        <thead><tr><th id="cheatsheet-th-source">Deutsch</th><th data-i18n="cheatsheetTr">Türkisch</th><th data-i18n="cheatsheetPron">Aussprache</th></tr></thead>
+        <tbody id="cheatsheet-body"></tbody>
       </table>
     </div>
   </section>
 
   <footer>
-    <p>Fortschritt wird automatisch gespeichert · <button class="link-btn" id="reset-btn">Fortschritt zurücksetzen</button></p>
+    <p><span data-i18n="footerText">Fortschritt wird automatisch gespeichert · </span><button class="link-btn" id="reset-btn" data-i18n="resetBtn">Fortschritt zurücksetzen</button></p>
   </footer>
 
+  <script src="i18n.js"></script>
   <script src="vocabulary.js"></script>
   <script src="dialogues.js"></script>
   <script src="app.js"></script>
